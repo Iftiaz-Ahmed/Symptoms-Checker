@@ -28,18 +28,20 @@ import torch.nn as nn  # All neural network modules, nn.Linear, nn.Conv2d, Batch
 class NN(nn.Module):
     def __init__(self, input_size, num_classes):
         super(NN, self).__init__()
-        self.fc1 = nn.Linear(input_size, 20)
-        self.fc2 = nn.Linear(20, 20)
-        self.fc3 = nn.Linear(20, 10)
-        self.fc4 = nn.Linear(10, 5)
-        self.fc5 = nn.Linear(5, num_classes)
+        self.fc1 = nn.Linear(input_size, 64)
+        self.fc2 = nn.Linear(64, 32)
+        self.fc3 = nn.Linear(32, 16)
+        self.fc4 = nn.Linear(16, 8)
+        self.fc5 = nn.Linear(8, 4)
+        self.fc6 = nn.Linear(4, num_classes)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
         x = F.relu(self.fc4(x))
-        x = self.fc5(x)
+        x = F.relu(self.fc5(x))
+        x = self.fc6(x)
         return x
 
 
@@ -156,3 +158,10 @@ fig, ax = plt.subplots()
 ax.plot(range(num_epochs), lss)
 ax.set(xlabel='Epochs', ylabel='Loss')
 plt.show()
+
+
+print("before")
+print(model)
+print("*******************")
+#saving the model
+torch.save(model.state_dict(), "D:/Client/symptoms_checker/trained_model/heartDisease.pth")

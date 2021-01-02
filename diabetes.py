@@ -158,3 +158,16 @@ fig, ax = plt.subplots()
 ax.plot(range(num_epochs), lss)
 ax.set(xlabel='Epochs', ylabel='Loss')
 plt.show()
+
+print("before")
+print(model)
+print("*******************")
+#saving the model
+torch.save(model.state_dict(), "D:/Client/symptoms_checker/trained_model/diabetes.pth")
+
+# #Later to restore:
+# model.load_state_dict(torch.load("D:/Client/symptoms_checker/trained_model/diabetes.pth"))
+# model.eval()
+# print("after")
+# print(model)
+# print("*******************")

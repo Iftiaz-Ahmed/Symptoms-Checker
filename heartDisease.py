@@ -23,6 +23,7 @@ from torch.utils.data import (
 )  # Gives easier dataset managment and creates mini batches
 import torch.nn as nn  # All neural network modules, nn.Linear, nn.Conv2d, BatchNorm, Loss functions
 
+soft = nn.Softmax(dim=1)
 
 # Create Fully Connected Network
 class NN(nn.Module):
@@ -63,12 +64,12 @@ class SoloDataset(Dataset):
 
 
 # Set device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu" if torch.cuda.is_available() else "cpu")
 
 # Hyperparameters
 num_classes = 2
 learning_rate = 0.001
-batch_size = 5
+batch_size = 64
 num_epochs = 1000
 input_size = 13
 
@@ -160,8 +161,8 @@ ax.set(xlabel='Epochs', ylabel='Loss')
 plt.show()
 
 
-print("before")
-print(model)
-print("*******************")
-#saving the model
-torch.save(model.state_dict(), "D:/Client/symptoms_checker/trained_model/heartDisease.pth")
+x = torch.FloatTensor([[52,	1,	0,	125,	212,	0,	1,	168,	0,	1,	2,	2,	3]])
+with torch.no_grad():
+    print(model(x))
+    traced_cell = torch.jit.trace(model, (x))
+torch.jit.save(traced_cell, "trained_model/heartDiseaseTest.pt")

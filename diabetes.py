@@ -33,7 +33,8 @@ class NN(nn.Module):
         self.fc3 = nn.Linear(32, 16)
         self.fc4 = nn.Linear(16, 16)
         self.fc5 = nn.Linear(16, 8)
-        self.fc6 = nn.Linear(8, num_classes)
+        self.fc6 = nn.Linear(8, 8)
+        self.fc7 = nn.Linear(8, num_classes)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -41,7 +42,8 @@ class NN(nn.Module):
         x = F.relu(self.fc3(x))
         x = F.relu(self.fc4(x))
         x = F.relu(self.fc5(x))
-        x = self.fc6(x)
+        x = F.relu(self.fc6(x))
+        x = self.fc7(x)
         return x
 
 
@@ -63,12 +65,12 @@ class SoloDataset(Dataset):
 
 
 # Set device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu" if torch.cuda.is_available() else "cpu")
 
 # Hyperparameters
 num_classes = 2
 learning_rate = 0.001
-batch_size = 5
+batch_size = 64
 num_epochs = 1000
 input_size = 8
 
@@ -77,8 +79,9 @@ dataset = SoloDataset(
     csv_file="dataset/diabetes.csv", root_dir="test123", transform=transforms.ToTensor()
 )
 
-train_set, test_set = torch.utils.data.random_split(dataset, [1600, 400])
+train_set, validation_set, test_set = torch.utils.data.random_split(dataset, [1200, 400, 400])
 train_loader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=True)
+validation_loader = DataLoader(dataset=validation_set, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(dataset=test_set, batch_size=batch_size, shuffle=True)
 
 # Model
@@ -89,8 +92,10 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
 print(len(train_set))
+print(len(validation_set))
 print(len(test_set))
 lss = []
+test_lss = []
 min_loss_found = 100
 min_loss_found_at_epoch = 0
 # Train Network
@@ -120,7 +125,36 @@ for epoch in range(num_epochs):
         min_loss_found = sum(losses) / len(losses)
         min_loss_found_at_epoch = epoch
 
-    print(f"Cost at epoch {epoch} is {sum(losses) / len(losses)}")
+    print(f"Train Cost at epoch {epoch} is {sum(losses) / len(losses)}")
+
+second_model = NN(input_size=input_size, num_classes=num_classes).to(device)
+# Loss and optimizer
+criterion2 = nn.CrossEntropyLoss()
+optimizer2 = optim.Adam(second_model.parameters(), lr=learning_rate)
+
+for epoch in range(num_epochs):
+    losses2 = []
+
+    for batch_idx, (data, targets) in enumerate(test_loader):
+        # Get data to cuda if possible
+        data = data.to(device=device)
+        targets = targets.to(device=device)
+
+        # forward
+        scores = second_model(data)
+        loss2 = criterion2(scores, targets)
+
+        losses2.append(loss2.item())
+
+        # backward
+        optimizer2.zero_grad()
+        loss2.backward()
+
+        # gradient descent or adam step
+        optimizer2.step()
+
+    test_lss.append(sum(losses2) / len(losses2))
+    print(f"Test Cost at epoch {epoch} is {sum(losses2) / len(losses2)}")
 
 
 # Check accuracy on training to see how good our model is
@@ -148,26 +182,25 @@ def check_accuracy(loader, model):
 
 print("Checking accuracy on Training Set")
 check_accuracy(train_loader, model)
-
-print("Checking accuracy on Test Set")
+print("Checking Test Set Accuracy on Training Set Model")
 check_accuracy(test_loader, model)
+
+print("Checking accuracy on Validation Set")
+check_accuracy(validation_loader, second_model)
+print("Checking Test Set Accuracy on Validation Set Model")
+check_accuracy(test_loader, second_model)
 
 print(min_loss_found_at_epoch, min_loss_found)
 print("Execution time: %s seconds" % (time.time() - start_time))
-fig, ax = plt.subplots()
-ax.plot(range(num_epochs), lss)
+fig, ax = plt.subplots(1)
+ax.plot(range(num_epochs), lss, color="blue", label="Train loss")
+ax.plot(range(num_epochs), test_lss, color="yellowgreen", label="Validation loss")
 ax.set(xlabel='Epochs', ylabel='Loss')
+plt.legend(loc="upper right", frameon=False)
 plt.show()
 
-print("before")
-print(model)
-print("*******************")
-#saving the model
-torch.save(model.state_dict(), "D:/Client/symptoms_checker/trained_model/diabetes.pth")
-
-# #Later to restore:
-# model.load_state_dict(torch.load("D:/Client/symptoms_checker/trained_model/diabetes.pth"))
-# model.eval()
-# print("after")
-# print(model)
-# print("*******************")
+x = torch.FloatTensor([[2, 138, 62,	35,	0, 33.6, 0.127, 47]])
+with torch.no_grad():
+    print(model(x))
+    traced_cell = torch.jit.trace(model, (x))
+torch.jit.save(traced_cell, "trained_model/diabetesTest.pt")
